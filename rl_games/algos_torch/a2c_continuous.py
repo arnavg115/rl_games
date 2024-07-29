@@ -25,6 +25,7 @@ class A2CAgent(a2c_common.ContinuousA2CBase):
         
         self.model = self.network.build(build_config)
         self.model.to(self.ppo_device)
+        self.kl_threshold = params["config"]["kl_threshold"]
         self.states = None
         self.init_rnn_from_model(self.model)
         self.last_lr = float(self.last_lr)
@@ -141,7 +142,7 @@ class A2CAgent(a2c_common.ContinuousA2CBase):
             kl_dist = torch_ext.policy_kl(mu.detach(), sigma.detach(), old_mu_batch, old_sigma_batch, reduce_kl)
             if rnn_masks is not None:
                 kl_dist = (kl_dist * rnn_masks).sum() / rnn_masks.numel()  #/ sum_mask
-        if kl_dist < 0.1:
+        if kl_dist < self.kl_threshold:
             self.scaler.scale(loss).backward()
             #TODO: Refactor this ugliest code of they year
             self.trancate_gradients_and_step()
